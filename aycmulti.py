@@ -86,13 +86,10 @@ def check(p, offset):
 
 for p in range(0,101):
     c = [ simulation(p) for i in range(TRIALS) ]
-    q = {}
+    q = [ 0 for i in range(PARTICIPANTS+1) ]
+    m = []
     for (v, good) in c:
-        try:
-            q[v].append(good)
-        except KeyError:
-            q[v] = [good]
-    for (k,g) in q.iteritems():
-        print "#GO TO {}".format(k)
-        print "{}\t{}".format(p,"\t".join([str(x) for x in stats.stats_set(g)]))
+        q[v] += 1
+        m.append(good)
+    print "{}\t{}\t{}".format(p,"\t".join([str(x) for x in stats.stats_set(m)]),"\t".join([str(x) for x in q]))
 
