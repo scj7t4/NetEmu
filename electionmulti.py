@@ -5,7 +5,7 @@ from stats import *
 MAX_ATTEMPTS = 200
 MAX_CHECKS = 50
 TRIALS = 500
-PARTICIPANTS = 2
+PARTICIPANTS = 10
 
 
 """
@@ -126,14 +126,11 @@ def simulation(p):
     slows = 0
     while bad < MAX_CHECKS:
         (r,q) = check(p,offset)
-        if sum(q) > PARTICIPANTS:
-            print "AHHHHHHHHH BAD"
-            exit(1)
         if r == True:
             quicks += 1
         else:
             if max(q) == 1:
-                print q
+                #print q
                 slows += 1
             else:
                 break
