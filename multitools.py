@@ -14,6 +14,8 @@ def partition(participants, partitions, reliability):
         ptop[i] = j
     for i in range(participants):
         for j in range(participants):
+            if i == j:
+                continue
             if ptop[i] == ptop[j]:
                 r[(i,j)] = 100
             else:

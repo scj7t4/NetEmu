@@ -8,9 +8,9 @@ from stats import *
 # 5 for readys
 # 45 seconds total
 # 225 @ 200ms, 450 @ 100ms
-MAX_ATTEMPTS = 225
+MAX_ATTEMPTS = 450
 MAX_CHECKS = 50
-TRIALS = 5000
+TRIALS = 50
 
 
 """
@@ -36,10 +36,10 @@ class Participant(object):
         self.leader = False
         self.premerge_v = random.randint(50,150) if premerge_v == None else premerge_v
     
-        self.ayctimer = 25
+        self.ayctimer = 50
         self.premerge = None
-        self.peerwait = 25
-        self.timeout = 50
+        self.peerwait = 50
+        self.timeout = 100
         self.ticks = 0
 
     def tick(self,protocol):
@@ -125,8 +125,8 @@ def check(p, offset):
     leader = Participant(100)
     member = Participant(50)
     
-    leader_p = SUC()
-    member_p = SUC()
+    leader_p = SUC(p)
+    member_p = SUC(p)
 
     s = 0
     while (s < MAX_ATTEMPTS and (not leader.finished() or not member.finished()) ):
@@ -134,8 +134,8 @@ def check(p, offset):
         if s > offset:
             member.tick(member_p)
         
-        for_m = [ m for m in leader_p.tick(p) ]
-        for_l = [ m for m in member_p.tick(p) ]
+        for_m = [ m for m in leader_p.tick() ]
+        for_l = [ m for m in member_p.tick() ]
 
         #print "To Member ",for_m
         #print "To Leader ",for_l

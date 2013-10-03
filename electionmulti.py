@@ -9,9 +9,16 @@ from multitools import *
 # 5 for readys
 # 45 seconds total
 # 225 @ 200ms, 450 @ 100ms
-MAX_ATTEMPTS = 450
+GLOBAL_TIMEOUT = 50
+TIMEOUT_TIMEOUT = 100
+CHECK_TIMEOUT = 100
+
+PREMERGE_MIN = 50
+PREMERGE_MAX = 150 
+
+MAX_ATTEMPTS = 500
 MAX_CHECKS = 50
-TRIALS = 500
+TRIALS = 10
 
 
 """
@@ -29,11 +36,11 @@ class CommonStore(object):
         self.invite_foreign = False
         self.ready_foreign = False
         self.leader = False
-        self.premerge_v = random.randint(0,100) if premerge_v == None else premerge_v
-        self.ayctimer = 25
+        self.premerge_v = random.randint(PREMERGE_MIN,PREMERGE_MAX) if premerge_v == None else premerge_v
+        self.ayctimer = GLOBAL_TIMEOUT
         self.premerge = None
-        self.peerwait = 25
-        self.timeout = 50
+        self.peerwait = GLOBAL_TIMEOUT
+        self.timeout = TIMEOUT_TIMEOUT
         self.ticks = 0
         self.enable_premerge = False
         self.ready = False
@@ -106,7 +113,7 @@ class Participant(object):
         elif msg == "AYC_R" and self.common.ayctimer > 0:
             self.AYC_response = True
 
-        elif msg == "INVITE" and not self.common.invite_foreign:
+        elif msg == "INVITE" and not self.common.invite_foreign and not self.common.leader:
             self.common.invite_foreign = True
             self.invite_from_this = True
             if self.common.leader == False:
@@ -137,10 +144,10 @@ def simulation(p):
         if r == True:
             quicks += 1
         else:
-            if max(q) == 1:
+            if len(q) > 0 and max([len(x) for x in q]) == 1:
                 #print q
                 slows += 1
-            else:
+            elif len(q) > 0:
                 break
         bad += 1
 
@@ -169,7 +176,7 @@ def check(p, offset):
     # Attempt Counter
     s = 0
     # While the maximum number of attempts has not been reached and not all nodes are ready:
-    while (s < MAX_ATTEMPTS and ( not all([c.ready for c in commons]) ) ):
+    while s < MAX_ATTEMPTS:
 
         for c in commons:
             c.tick()
@@ -201,9 +208,11 @@ def check(p, offset):
     r = []
     for i in range(PARTICIPANTS):
         q = []
-        if commons[i].leader == True:
+        if commons[i].leader == True and commons[i].finished() == True:
             q.append(i)
             for j in range(PARTICIPANTS):
+                if not commons[j].finished():
+                    continue
                 if i == j:
                     continue
                 if channel[j][i][0].ready_from_this and channel[j][i][0].common.finished():
@@ -217,7 +226,6 @@ def check(p, offset):
     if any([ channel[i][j][0].aycfinished() for (i,j) in iterthing ]):
         quick = False    
     
- 
     return (quick,r)
 
 for p in range(0,100):
