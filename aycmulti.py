@@ -2,12 +2,13 @@ import random
 import protocol
 import stats
 from protocol import SUC,SRC
+from multitools import *
 
 
+# 50 for 100ms 25 for 200ms (5 seconds, 200ms / 100ms)
 MAX_ATTEMPTS = 50
 MAX_CHECKS = 32
-TRIALS = 50000
-PARTICIPANTS = 10
+TRIALS = 500
 
 class Participant(object):
     def __init__(self):
@@ -51,8 +52,9 @@ def simulation(p):
     return (v, good)
 
 def check(p, offset):
-    leader = [ (Participant(), SUC()) for x in range(PARTICIPANTS - 1) ]
-    member = [ (Participant(), SUC()) for x in range(PARTICIPANTS - 1) ]
+    
+    leader = [ (Participant(), SUC(p)) for x in range(PARTICIPANTS - 1) ]
+    member = [ (Participant(), SUC(p)) for x in range(PARTICIPANTS - 1) ]
    
     s = 0
     while (s < MAX_ATTEMPTS and not all([ pr.finished() for (pr,_) in leader+member ]) ):
@@ -62,8 +64,8 @@ def check(p, offset):
         for (par,pro) in member:
             par.tick(pro)
         
-        for_m = [ [ m for m in pr.tick(p) ] for (par, pr) in leader ]
-        for_l = [ [ m for m in pr.tick(p) ] for (par, pr) in member ]
+        for_m = [ [ m for m in pr.tick() ] for (par, pr) in leader ]
+        for_l = [ [ m for m in pr.tick() ] for (par, pr) in member ]
 
         #print for_m
         #print for_l

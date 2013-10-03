@@ -1,11 +1,17 @@
 import random
 from protocol import SUC
 from stats import *
+from multitools import *
 
-MAX_ATTEMPTS = 200
+# 5 seconds for AYC
+# 30 for premerge
+# 5 for accepts
+# 5 for readys
+# 45 seconds total
+# 225 @ 200ms, 450 @ 100ms
+MAX_ATTEMPTS = 450
 MAX_CHECKS = 50
 TRIALS = 500
-PARTICIPANTS = 10
 
 
 """
@@ -65,6 +71,7 @@ class Participant(object):
         self.accept_foreign = False
         self.sent_invite = False
         self.invite_from_this = False
+        self.ready_from_this = False
         self.common = common 
 
     def tick(self,protocol):
@@ -110,6 +117,7 @@ class Participant(object):
 
         elif msg == "READY" and self.common.timeout > 0 and not self.common.ready_foreign and self.invite_from_this == True:
             self.common.ready_foreign = True
+            self.ready_from_this = True
 
     def aycfinished(self):
         if self.AYC and self.AYC_response:
@@ -138,6 +146,7 @@ def simulation(p):
 
     return (quicks, slows, q)
 
+
 def check(p, offset):
     # The values stored globably by each processes (Shared betweeen all channels)
     commons = [ CommonStore() for c in range(PARTICIPANTS) ]
@@ -146,6 +155,7 @@ def check(p, offset):
     # The message channels (one for each pairing of nodes, (i,j)
     channel = {}
 
+    relmap = reliability(p)
     # For each pair of participiants, create a unidirectional channel and protocol between them.
     for i in range(PARTICIPANTS):
         for j in range(PARTICIPANTS):
@@ -154,7 +164,7 @@ def check(p, offset):
             iterthing.append( (i,j) )
             if i not in channel:
                 channel[i] = {}
-            channel[i][j] = ( Participant(commons[i]), SUC() )
+            channel[i][j] = ( Participant(commons[i]), SUC(relmap[(i,j)]) )
 
     # Attempt Counter
     s = 0
@@ -173,7 +183,7 @@ def check(p, offset):
         for (i,j) in iterthing:
             if (j,i) not in mb:
                 mb[(j,i)] = []
-            mb[(j,i)] += [ m for m in channel[i][j][1].tick(p) ]
+            mb[(j,i)] += [ m for m in channel[i][j][1].tick() ]
 
 
         #for (k,v) in mb.iteritems():
@@ -190,14 +200,15 @@ def check(p, offset):
     
     r = []
     for i in range(PARTICIPANTS):
+        q = []
         if commons[i].leader == True:
-            d = 1
+            q.append(i)
             for j in range(PARTICIPANTS):
                 if i == j:
                     continue
-                if channel[j][i][0].invite_from_this and channel[j][i][0].common.finished():
-                    d += 1
-            r.append(d)
+                if channel[j][i][0].ready_from_this and channel[j][i][0].common.finished():
+                    q.append(j)
+            r.append(tuple(q))
     
     quick = True
     #evaluate if the failure mode is a slow failure or a fast one

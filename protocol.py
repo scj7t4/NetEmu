@@ -6,18 +6,19 @@ def attempt_delivery(p):
     return False
 
 class SUC(object):
-    def __init__(self):
+    def __init__(self,reliability):
         self.q = []
         self.ACK = None
         self.s = 0
+        self.p = reliability
 
-    def tick(self,p):
+    def tick(self):
         i = 0
         while i < len(self.q) and i < 8:
-            if attempt_delivery(p):
+            if attempt_delivery(self.p):
                 yield ('MSG',self.q[i][0],self.q[i][1])
             i += 1
-        if self.ACK != None and attempt_delivery(p):
+        if self.ACK != None and attempt_delivery(self.p):
             yield ('ACK',self.ACK,'')
             #self.ACK = None
 
@@ -37,15 +38,16 @@ class SUC(object):
         self.s += 1
 
 class SRC(object):
-    def __init__(self):
+    def __init__(self,reliability):
         self.q = []
         self.ACK = None
         self.s = 0
+        self.p = reliability
 
     def tick(self,p):
-        if len(self.q) > 0 and attempt_delivery(p):
+        if len(self.q) > 0 and attempt_delivery(self.p):
             yield ('MSG',self.q[0][0],self.q[0][1])
-        if self.ACK != None and attempt_delivery(p):
+        if self.ACK != None and attempt_delivery(self.p):
             yield ('ACK',self.ACK,'')
 
     def recv(self,msg):

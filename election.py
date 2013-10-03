@@ -2,7 +2,13 @@ import random
 from protocol import SUC
 from stats import *
 
-MAX_ATTEMPTS = 200
+# 5 seconds for AYC
+# 30 for premerge
+# 5 for accepts
+# 5 for readys
+# 45 seconds total
+# 225 @ 200ms, 450 @ 100ms
+MAX_ATTEMPTS = 225
 MAX_CHECKS = 50
 TRIALS = 5000
 
