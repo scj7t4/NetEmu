@@ -1,7 +1,34 @@
 import random
 from protocol import SUC
 from stats import *
-from multitools import *
+
+PARTICIPANTS = 2
+
+def partition(participants, partitions, reliability):
+    if sum(partitions) != participants:
+        raise ValueError
+    ptop = {}
+    j = 0
+    r = {}
+    for i in range(participants):
+        if partitions[0] == 0:
+            j += 1
+            partitions.pop(0)
+        partitions[0] -= 1
+        ptop[i] = j
+    for i in range(participants):
+        for j in range(participants):
+            if i == j:
+                continue
+            if ptop[i] == ptop[j]:
+                r[(i,j)] = 100
+            else:
+                r[(i,j)] = reliability
+    return r
+
+def reliability(x):
+    return partition(PARTICIPANTS, [1,1], x)
+
 
 # 5 seconds for AYC
 # 30 for premerge
@@ -16,12 +43,12 @@ CHECK_TIMEOUT = 100
 PREMERGE_MIN = 50
 PREMERGE_MAX = 150 
 
-MAX_ATTEMPTS = 500
+MAX_ATTEMPTS = 450
 MAX_CHECKS = 50
-TRIALS = 10
+TRIALS = 100
 
 class Participant(object):
-    def __init__(self,premerge_v=None):
+    def __init__(self,pid,premerge_v=None):
         self.AYC = False
         self.AYC_response = []
         self.remoteAYC = []
@@ -29,11 +56,12 @@ class Participant(object):
         self.invite_response = [] # replaces self.accept.
         self.remoteInvite = None
         self.ready = False
-        self.remoteReady = None
-        self.remoteInvite = False
+        self.remoteReady = False
+        self.remoteInvite = None
         self.premerge_v = random.randint(50,150) if premerge_v == None else premerge_v
         self.acceptingRemoteInvite = True
         self.channels = {}
+        self.pid = pid
     
         self.ayctimer = GLOBAL_TIMEOUT
         self.premerge = None
@@ -41,21 +69,27 @@ class Participant(object):
         self.timeout = TIMEOUT_TIMEOUT
         self.ticks = 0
 
+    def __repr__(self):
+        return "AYC_R: {} / Inv: {} / R. Inv: {} / Rdy: {} / RmRdy: {}".format(self.AYC_response,
+            self.invite, self.remoteInvite, self.ready, self.remoteReady)
+
     def add_channel(self, peer, channel):
         self.channels[peer] = channel
         
     def tick(self):
-        #if you've sent and invite and you are the leader, and the timer for peers responding haven't expired, tick
+        self.ticks += 1    
+    
+        # If a premerge timer has been set and hasn't expired, tick the timer
+        if self.premerge != None and self.premerge > 0 and self.remoteInvite == None:
+            self.premerge -= 1
+        
+        #if you've sent and invite and you are the leader, and the timer for peers responding haven't expired, 
         if self.invite and not self.acceptingRemoteInvite and self.peerwait > 0:
             self.peerwait -= 1
             
         #if you've sent an AYC and and it hasn't expired, tick the timer
         if self.AYC and self.ayctimer > 0:
             self.ayctimer -= 1
-            
-        # If a premerge timer has been set and hasn't expired, tick the timer
-        if self.premerge != None and self.premerge > 0 and not self.remoteInvite:
-            self.premerge -= 1
             
         if len(self.AYC_response) > 0 and self.ayctimer == 0 and self.premerge == None:
             #If you've recieved a response and the timer has expired, select a premerge
@@ -70,29 +104,31 @@ class Participant(object):
                 self.channels[peer].send("AYC")
             self.AYC = True
 
-        if len(self.AYC_response) > 0 and self.ayctimer == 0 and self.premerge == 0 and not self.remoteInvite and not self.invite:
+        if len(self.AYC_response) > 0 and self.ayctimer == 0 and self.premerge == 0 and self.remoteInvite == None and self.invite == False:
+            #print "Setting {} as leader ({})".format(self.pid, self.ticks)
             for peer in self.channels:
                 if peer in self.AYC_response:
-                    protocol.send("INVITE")
+                    self.channels[peer].send("INVITE")
             self.invite = True
             self.acceptingRemoteInvite = False
 
-        if self.peerwait == 0 and not self.ready:
+        if len(self.invite_response) > 0 and self.peerwait == 0 and not self.ready:
             for peer in self.channels:
                 if peer in self.invite_response:
-                    protocol.send("READY")
+                    self.channels[peer].send("READY")
             self.ready = True
     
     def recv(self,peer,m):
         (t,s,msg) = m
         if msg == "AYC":
-            self.remote_AYC.append(peer)
+            self.remoteAYC.append(peer)
             self.channels[peer].send("AYC_R")
 
         elif msg == "AYC_R" and self.ayctimer > 0:
             self.AYC_response.append(peer)
 
         elif msg == "INVITE" and self.remoteInvite == None:
+            #print "Inv from {} ({})".format(peer, self.ticks)
             if self.acceptingRemoteInvite == True:
                 self.remoteInvite = peer
                 self.channels[peer].send("ACCEPT")
@@ -100,7 +136,7 @@ class Participant(object):
         elif msg == "ACCEPT" and not self.acceptingRemoteInvite and self.peerwait > 0:
             self.invite_response.append(peer)
 
-        elif msg == "READY" and self.timeout > 0 and self.remoteReady == None and self.remoteInvite == peer:
+        elif msg == "READY" and self.timeout > 0 and self.remoteReady == False and self.remoteInvite == peer:
             self.remoteReady = True
 
     def aycfinished(self):
@@ -114,36 +150,35 @@ class Participant(object):
         return False
 
 def simulation(p):
-    offset = 50
+    offsets = [0, 51]
     
     bad = 0
     quicks = 0
     slows = 0
     while bad < MAX_CHECKS:
-        (r,q) = check(p,offset)
+        (r,q) = check(p,offsets)
         if r == True:
             quicks += 1
+        elif len(q) == 0 or  max([len(g) for g in q]) <= 1:
+            #print q
+            slows += 1
         else:
-            if max(q) == 1:
-                #print q
-                slows += 1
-            else:
-                break
+            break
         bad += 1
 
     return (quicks, slows, q)
 
-
-def check(p, offset):
+def check(p, offsets):
 
     # The message channels (one for each pairing of nodes, (i,j)
     channels = {}
     peers = {}
 
     relmap = reliability(p)
+    premerges = [50,0]
     # For each pair of participiants, create a unidirectional channel and protocol between them.
     for i in range(PARTICIPANTS):
-        peer[i] = Participant()
+        peers[i] = Participant(i,premerges[i])
     
     for i in range(PARTICIPANTS):
         for j in range(PARTICIPANTS):
@@ -151,27 +186,28 @@ def check(p, offset):
                 continue
             if i not in channels:
                 channels[i] = {}
-            channels[i][j] = SUC(relmap[(i,j)]) 
-            peer[i].add_channel(j, channels[i][j])
+            channels[i][j] = SUC(p) 
+            peers[i].add_channel(j, channels[i][j])
 
     # Attempt Counter
     s = 0
     # While the maximum number of attempts has not been reached and not all nodes are ready:
-    while (s < MAX_ATTEMPTS and ( not all([peer.finished() for peer in peers]) ) ):
+    while (s < MAX_ATTEMPTS):
     
         # Advance each participants clock
         for peer in peers:
-            peers[peer].tick()
+            if s >= offsets[peer]: 
+                peers[peer].tick()
         
         # For each pair of nodes, see if any messages can be recieved
         mb = {}
         for i in range(PARTICIPANTS):
             for j in range(PARTICIPANTS):
                 if i == j:
-                    continue:
+                    continue
                 if (j,i) not in mb: # Message from i, to j.
                     mb[(j,i)] = []
-                mb[(j,i)] += [ m for m in channels[i][j].tick() ]
+                mb[(j,i)] = [ m for m in channels[i][j].tick() ]
 
 
         #for (k,v) in mb.iteritems():
@@ -181,10 +217,10 @@ def check(p, offset):
         for i in range(PARTICIPANTS):
             for j in range(PARTICIPANTS):
                 if i == j:
-                    continue:
-                for m in mb[(j,i)]:
-                    if channel[j][i].recv(m):
-                        peer[j].recv(i,m)
+                    continue
+                for m in mb[(i,j)]:
+                    if channels[i][j].recv(m):
+                        peers[i].recv(j,m)
 
         # Mark an attempt.
         s += 1
@@ -192,22 +228,30 @@ def check(p, offset):
     r = []
     for i in range(PARTICIPANTS):
         q = []
-        if peer[i].invite == True:
+        if peers[i].invite == True and peers[i].finished():
             q.append(i)
             for j in range(PARTICIPANTS):
                 if i == j:
                     continue
-                if peer[j].remoteInvite == i and peer[j].remoteReady == True:
+                #if j not in peers[i].invite_response:
+                #    continue
+                if peers[j].remoteInvite == i and peers[j].finished():
                     q.append(j)
             r.append(tuple(q))
-    
+    """
+    print r   
+
+    for p in peers:
+        print peers[p]
+    """ 
+
     quick = True
     #evaluate if the failure mode is a slow failure or a fast one
-    #A slow failure is when all communication channels get past the AYC phase
+    #A slow failure is when any communication channels get past the AYC phase
     #But fail to form a group.
-    if any([ peer.aycfinished() for peer in peers ]):
+    if any([ peers[peer].aycfinished() for peer in peers ]):
         quick = False    
-    
+
     return (quick,r)
 
 for p in range(0,100):

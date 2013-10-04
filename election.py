@@ -10,7 +10,7 @@ from stats import *
 # 225 @ 200ms, 450 @ 100ms
 MAX_ATTEMPTS = 450
 MAX_CHECKS = 50
-TRIALS = 50
+TRIALS = 100
 
 
 """
@@ -141,15 +141,15 @@ def check(p, offset):
         #print "To Leader ",for_l
 
         for m in for_l:
-            leader_p.recv(m)
-            leader.recv(leader_p,m)
+            if leader_p.recv(m):
+                leader.recv(leader_p,m)
         for m in for_m:
-            member_p.recv(m)
-            member.recv(member_p,m)
+            if member_p.recv(m):
+                member.recv(member_p,m)
 
         s += 1
     
-    if leader.finished() and member.finished():
+    if (leader.ready and member.ready_foreign) or (leader.ready_foreign and member.ready):
         return 2
     if leader.aycfinished() or member.aycfinished():
         return 1
