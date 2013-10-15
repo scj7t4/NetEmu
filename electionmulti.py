@@ -1,54 +1,12 @@
 import random
 from protocol import SUC
 from stats import *
+from multitools import *
+from settings import *
 
-PARTICIPANTS = 2
-
-def partition(participants, partitions, reliability):
-    if sum(partitions) != participants:
-        raise ValueError
-    ptop = {}
-    j = 0
-    r = {}
-    for i in range(participants):
-        if partitions[0] == 0:
-            j += 1
-            partitions.pop(0)
-        partitions[0] -= 1
-        ptop[i] = j
-    for i in range(participants):
-        for j in range(participants):
-            if i == j:
-                continue
-            if ptop[i] == ptop[j]:
-                r[(i,j)] = 100
-            else:
-                r[(i,j)] = reliability
-    return r
-
-def reliability(x):
-    return partition(PARTICIPANTS, [1,1], x)
-
-
-# 5 seconds for AYC
-# 30 for premerge
-# 5 for accepts
-# 5 for readys
-# 45 seconds total
-# 225 @ 200ms, 450 @ 100ms
-GLOBAL_TIMEOUT = 50
-TIMEOUT_TIMEOUT = 100
-CHECK_TIMEOUT = 100
-
-PREMERGE_MIN = 50
-PREMERGE_MAX = 150 
-
-MAX_ATTEMPTS = 450
-MAX_CHECKS = 50
-TRIALS = 100
 
 class Participant(object):
-    def __init__(self,pid,premerge_v=None):
+    def __init__(self,pid,premerge_v):
         self.AYC = False
         self.AYC_response = []
         self.remoteAYC = []
@@ -58,15 +16,15 @@ class Participant(object):
         self.ready = False
         self.remoteReady = False
         self.remoteInvite = None
-        self.premerge_v = random.randint(50,150) if premerge_v == None else premerge_v
+        self.premerge_v = premerge_v
         self.acceptingRemoteInvite = True
         self.channels = {}
         self.pid = pid
     
-        self.ayctimer = GLOBAL_TIMEOUT
+        self.ayctimer = CONFIG.GLOBAL_TIMEOUT
         self.premerge = None
-        self.peerwait = GLOBAL_TIMEOUT
-        self.timeout = TIMEOUT_TIMEOUT
+        self.peerwait = CONFIG.GLOBAL_TIMEOUT
+        self.timeout = CONFIG.TIMEOUT_TIMEOUT
         self.ticks = 0
 
     def __repr__(self):
@@ -150,12 +108,12 @@ class Participant(object):
         return False
 
 def simulation(p):
-    offsets = [0, 51]
+    offsets = CONFIG.OFFSETS
     
     bad = 0
     quicks = 0
     slows = 0
-    while bad < MAX_CHECKS:
+    while bad < CONFIG.ELECTION_MAX_CHECKS:
         (r,q) = check(p,offsets)
         if r == True:
             quicks += 1
@@ -175,24 +133,24 @@ def check(p, offsets):
     peers = {}
 
     relmap = reliability(p)
-    premerges = [50,0]
+    premerges = CONFIG.PREMERGES
     # For each pair of participiants, create a unidirectional channel and protocol between them.
-    for i in range(PARTICIPANTS):
+    for i in range(CONFIG.PARTICIPANTS):
         peers[i] = Participant(i,premerges[i])
     
-    for i in range(PARTICIPANTS):
-        for j in range(PARTICIPANTS):
+    for i in range(CONFIG.PARTICIPANTS):
+        for j in range(CONFIG.PARTICIPANTS):
             if i == j:
                 continue
             if i not in channels:
                 channels[i] = {}
-            channels[i][j] = SUC(p) 
+            channels[i][j] = CONFIG.PROTOCOL( relmap[ (i,j) ] ) 
             peers[i].add_channel(j, channels[i][j])
 
     # Attempt Counter
     s = 0
     # While the maximum number of attempts has not been reached and not all nodes are ready:
-    while (s < MAX_ATTEMPTS):
+    while (s < CONFIG.ELECTION_MAX_TICKS):
     
         # Advance each participants clock
         for peer in peers:
@@ -201,8 +159,8 @@ def check(p, offsets):
         
         # For each pair of nodes, see if any messages can be recieved
         mb = {}
-        for i in range(PARTICIPANTS):
-            for j in range(PARTICIPANTS):
+        for i in range(CONFIG.PARTICIPANTS):
+            for j in range(CONFIG.PARTICIPANTS):
                 if i == j:
                     continue
                 if (j,i) not in mb: # Message from i, to j.
@@ -214,8 +172,8 @@ def check(p, offsets):
         #    print "{} : {}".format(k,v)
 
         # For each pair of nodes, see if the recieved message is accepted by the protocol and delivered to j.
-        for i in range(PARTICIPANTS):
-            for j in range(PARTICIPANTS):
+        for i in range(CONFIG.PARTICIPANTS):
+            for j in range(CONFIG.PARTICIPANTS):
                 if i == j:
                     continue
                 for m in mb[(i,j)]:
@@ -226,11 +184,11 @@ def check(p, offsets):
         s += 1
     
     r = []
-    for i in range(PARTICIPANTS):
+    for i in range(CONFIG.PARTICIPANTS):
         q = []
         if peers[i].invite == True and peers[i].finished():
             q.append(i)
-            for j in range(PARTICIPANTS):
+            for j in range(CONFIG.PARTICIPANTS):
                 if i == j:
                     continue
                 #if j not in peers[i].invite_response:
@@ -254,28 +212,38 @@ def check(p, offsets):
 
     return (quick,r)
 
-for p in range(0,100):
-    g = [ simulation(p) for i in range(TRIALS) ]
-    # Collect the quick failures
-    g1 = [ x[0] for x in g ]
-    # Collect the slow failures
-    g2 = [ x[1] for x in g ]
-    # Collect the groups that are formed
-    qs = [ x[2] for x in g ]
-    # Sort them so that when you put them into a set (2,2,1) is the same as (1,2,2)
-    qs = [ tuple(sorted(x)) for x in qs ]
-    # d is a counting set
-    d = {}
-    for l in qs:
-        try:
-            d[l] += 1
-        except KeyError:
-            d[l] = 1
-    #Print the failures
-    print "{}\tQUICKS\t{}\tSLOWS\t{}".format(p,
-        "\t".join([str(x) for x in stats_set(g1)]),
-        "\t".join([str(x) for x in stats_set(g2)]),
-        )
-    #Print the counts of the different types of groups formed;
-    for (k,v) in d.iteritems():
-        print "#{}: {}".format(k,v)
+def main():
+    CONFIG.print_profile_summary()
+    for p in range(0,101,CONFIG.GRANULARITY):
+        g = [ simulation(p) for i in range(CONFIG.ELECTION_TRIALS) ]
+        # Collect the quick failures
+        g1 = [ x[0] for x in g ]
+        # Collect the slow failures
+        g2 = [ x[1] for x in g ]
+        # Collect the groups that are formed
+        qs = [ x[2] for x in g ]
+        # Sort them so that when you put them into a set (2,2,1) is the same as (1,2,2)
+        qs = [ tuple(sorted(x)) for x in qs ]
+        # d is a counting set
+        d = {}
+        for l in qs:
+            try:
+                d[l] += 1
+            except KeyError:
+                d[l] = 1
+        #Print the failures
+        print "{}\tQUICKS\t{}\tSLOWS\t{}".format(p,
+            "\t".join([str(x) for x in stats_set(g1)]),
+            "\t".join([str(x) for x in stats_set(g2)]),
+            )
+        #Print the counts of the different types of groups formed;
+        for (k,v) in d.iteritems():
+            print "#{}: {}".format(k,v)
+
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 2:
+        print "Give me an profile file as an argument and I will run that profile."
+    else:
+        CONFIG.load_from_profile(sys.argv[1])
+        main() 

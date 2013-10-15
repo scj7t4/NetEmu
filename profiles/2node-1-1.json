@@ -1,0 +1,32 @@
+{
+    "protocol": "SUC", 
+    "check_timeout": 10000, 
+    "offsets": [
+        0, 
+        0
+    ], 
+    "premerges": [
+        0, 
+        0
+    ], 
+    "_comment": "Two node example with no offset", 
+    "global_timeout": 5000, 
+    "ayc": {
+        "trials": 500, 
+        "max_checks": 50, 
+        "max_time": 15000
+    }, 
+    "participants": 2, 
+    "election": {
+        "trials": 500, 
+        "max_checks": 50, 
+        "max_time": 50000
+    }, 
+    "granularity": 5, 
+    "timeout_timeout": 10000, 
+    "partitions": [
+        1, 
+        1
+    ], 
+    "resend": 200
+}

@@ -51,8 +51,8 @@ def check(p, offset):
     leader = Participant()
     member = Participant()
     
-    leader_p = SRC()
-    member_p = SRC()
+    leader_p = SUC(p)
+    member_p = SUC(p)
 
     s = 0
     while (s < MAX_ATTEMPTS or (leader.finished() and s-offset < MAX_ATTEMPTS)) and (not leader.finished() or not member.finished()):
@@ -60,8 +60,8 @@ def check(p, offset):
         if s > offset:
             member.tick(member_p)
         
-        for_m = [ m for m in leader_p.tick(p) ]
-        for_l = [ m for m in member_p.tick(p) ]
+        for_m = [ m for m in leader_p.tick() ]
+        for_l = [ m for m in member_p.tick() ]
 
         #print for_m
         #print for_l
@@ -82,7 +82,7 @@ def check(p, offset):
         return True
     return False
 
-for p in range(0,101):
+for p in range(0,101,5):
     g = [ simulation(p) for i in range(TRIALS) ]
     print "{}\t{}".format(p,"\t".join([str(x) for x in stats.stats_set(g)]))
 
