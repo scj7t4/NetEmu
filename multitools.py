@@ -1,17 +1,18 @@
 from settings import *
 
 def partition(participants, partitions, reliability):
-    if sum(partitions) != participants:
-        raise ValueError
+    if sum(partitions) != participants: 
+        raise ValueError(str(partitions)+" "+str(participants))
     ptop = {}
     j = 0
     r = {}
     for i in range(participants):
-        if partitions[0] == 0:
+        while len(partitions) > 0 and partitions[0] == 0:
             j += 1
             partitions.pop(0)
-        partitions[0] -= 1
-        ptop[i] = j
+        if len(partitions) > 0:
+            partitions[0] -= 1
+            ptop[i] = j
     for i in range(participants):
         for j in range(participants):
             if i == j:
@@ -23,4 +24,4 @@ def partition(participants, partitions, reliability):
     return r
 
 def reliability(x):
-    return partition(CONFIG.PARTICIPANTS, CONFIG.PARTITIONS, x)
+    return partition(CONFIG.PARTICIPANTS, list(CONFIG.PARTITIONS), x)

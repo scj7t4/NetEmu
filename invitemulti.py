@@ -5,36 +5,47 @@ from protocol import SUC,SRC
 from multitools import *
 
 class Participant(object):
-    def __init__(self):
-        self.AYQ = False
-        self.AYQ_response = []
-        self.AYQ_foreign = []
-        self.channels = {}   
+    def __init__(self,leader):
+        self.leader = leader
+        self.remoteinvite = None
+        self.invite = False
+        self.accept = []
+        self.ready_sent = False
+        self.ready = []
+        self.channels = {}
+        self.response_timeout = CONFIG.GLOBAL_TIMEOUT 
+        self.ready_timeout = CONFIG.TIMEOUT_TIMEOUT
 
     def add_channel(self,peer,channel):
         self.channels[peer] = channel
 
     def tick(self):
-        if not self.AYQ:
+        if self.invite == True and self.response_timeout > 0:
+            self.response_timeout -= 1
+        if self.remoteinvite != None and self.ready_timeout > 0:
+            self.ready_timeout -= 1
+        if self.invite == False and self.leader == True:
             for peer in self.channels:
-                self.channels[peer].send("AYQ")
-            self.AYQ = True
+                self.channels[peer].send("Invite")
+            self.invite = True
+        if self.response_timeout == 0:
+            for peer in self.accept:
+                self.channels[peer].send("Ready")
 
     def recv(self,peer,m):
         (t,s,msg) = m
-        if msg == "AYQ" and peer not in self.AYQ_foreign:
-            self.AYQ_foreign.append(peer)
-            self.channels[peer].send("AYQ_R")
-        elif msg == "AYQ_R" and peer not in self.AYQ_response:
-            self.AYQ_response.append(peer)
-    
+        if msg == "Invite" and self.remoteinvite == None:
+            self.remoteinvite = peer
+            self.channels[peer].send("Accept")
+        elif msg == "Accept" and peer not in self.accept and self.response_timeout > 0:
+            self.accept.append(peer)
+        elif msg == "Ready" and peer not in self.ready and self.ready_timeout > 0:
+            self.ready.append(peer)
+
     def finished(self):
-        if self.AYQ and len(self.AYQ_response) > 0:
+        if len(self.ready) > 0 or self.ready_sent:
             return True
         return False
-
-    def __repr__(self):
-       return "{}\t{}\t{}".format(self.AYQ,self.AYQ_response,self.AYQ_foreign)
 
 
 def simulation(p):
@@ -44,16 +55,15 @@ def simulation(p):
     v = CONFIG.PARTICIPANTS
     return check(p,offsets)
 
-
 def check(p, offsets):
-    leader = Participant()
+    leader = Participant(True)
     leader_channels = [ CONFIG.PROTOCOL(p) for x in range(CONFIG.PARTICIPANTS - 1) ]
     c = 1
     for channel in leader_channels:
         leader.add_channel(c,channel)
         c += 1
 
-    member = [ Participant() for x in range(CONFIG.PARTICIPANTS - 1) ]
+    member = [ Participant(False) for x in range(CONFIG.PARTICIPANTS - 1) ]
     member_channels = [ CONFIG.PROTOCOL(p) for x in range(CONFIG.PARTICIPANTS - 1) ]
     for party, channel in zip(member,member_channels):
         party.add_channel(0,channel)
@@ -89,11 +99,8 @@ def check(p, offsets):
     #print leader
     #print member
 
-    group = [0]
-    for peer in leader.AYQ_response:
-        if 0 in member[peer-1].AYQ_response:
-            group.append(peer)
-    return tuple(sorted(group))
+    return sum([ 1 for m in member if m.finished()])
+
 
 def main():
     CONFIG.print_profile_summary()

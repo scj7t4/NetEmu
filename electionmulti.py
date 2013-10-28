@@ -113,18 +113,20 @@ def simulation(p):
     bad = 0
     quicks = 0
     slows = 0
-    while bad < CONFIG.ELECTION_MAX_CHECKS:
-        (r,q) = check(p,offsets)
-        if r == True:
-            quicks += 1
-        elif len(q) == 0 or  max([len(g) for g in q]) <= 1:
-            #print q
-            slows += 1
-        else:
-            break
-        bad += 1
-
-    return (quicks, slows, q)
+    (r,q) = check(p,offsets)
+    if r == True:
+        return None
+    elif len(q) == 0 or  max([len(g) for g in q]) <= 1:
+        return [ (i,) for i in range(CONFIG.PARTICIPANTS) ]
+    else:
+        seen = set()
+        for group in q:
+            for peer in group:
+                seen.add(peer)
+        for i in range(CONFIG.PARTICIPANTS):
+            if i not in seen:
+                q.append( (i,) )   
+        return q
 
 def check(p, offsets):
 
@@ -150,7 +152,7 @@ def check(p, offsets):
     # Attempt Counter
     s = 0
     # While the maximum number of attempts has not been reached and not all nodes are ready:
-    while (s < CONFIG.ELECTION_MAX_TICKS):
+    while (s < CONFIG.ELECTION_MAX_TICKS+max(offsets)):
     
         # Advance each participants clock
         for peer in peers:
@@ -196,6 +198,8 @@ def check(p, offsets):
                 if peers[j].remoteInvite == i and peers[j].finished():
                     q.append(j)
             r.append(tuple(q))
+    
+    #print r
     """
     print r   
 
@@ -214,31 +218,22 @@ def check(p, offsets):
 
 def main():
     CONFIG.print_profile_summary()
+    resultset = {}
     for p in range(0,101,CONFIG.GRANULARITY):
         g = [ simulation(p) for i in range(CONFIG.ELECTION_TRIALS) ]
-        # Collect the quick failures
-        g1 = [ x[0] for x in g ]
-        # Collect the slow failures
-        g2 = [ x[1] for x in g ]
-        # Collect the groups that are formed
-        qs = [ x[2] for x in g ]
         # Sort them so that when you put them into a set (2,2,1) is the same as (1,2,2)
-        qs = [ tuple(sorted(x)) for x in qs ]
-        # d is a counting set
+        qs = [ tuple(x) for x in g if x != None ]
         d = {}
+        d['nocoordinators'] = sum([ 1 for x in g if x == None ])
+        # d is a counting set
         for l in qs:
             try:
-                d[l] += 1
+                d[str(l)] += 1
             except KeyError:
-                d[l] = 1
+                d[str(l)] = 1
         #Print the failures
-        print "{}\tQUICKS\t{}\tSLOWS\t{}".format(p,
-            "\t".join([str(x) for x in stats_set(g1)]),
-            "\t".join([str(x) for x in stats_set(g2)]),
-            )
-        #Print the counts of the different types of groups formed;
-        for (k,v) in d.iteritems():
-            print "#{}: {}".format(k,v)
+        resultset[p] = d
+    print json.dumps(resultset, indent=4, sort_keys=True)
 
 if __name__ == "__main__":
     import sys

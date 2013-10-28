@@ -1,0 +1,21 @@
+################# PROFILE SUMMARY ####################
+## File: None
+## Loaded: 2013-10-16 16:34:03.644355
+##
+## Participants: 0
+## Premerges: [0, 0, 0, 0]
+## Offsets: [0, 1, 2, 3]
+##
+## Granularity: 5
+## Global Timeout: 50
+## Timeout Timeout: 100
+## Check Timeout: 100
+##
+## Election :: Trials: 500
+## Election :: Max Ticks: 500
+## Election :: Max Checks: 50
+##
+## AYC :: Trials: 500
+## AYC :: Max Ticks: 150
+## AYC :: Max Checks: 50
+################# PROFILE SUMMARY ####################

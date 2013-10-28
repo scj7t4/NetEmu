@@ -1,0 +1,86 @@
+################# PROFILE SUMMARY ####################
+## File: None
+## Loaded: 2013-10-20 12:41:11.547890
+##
+## Participants: 1
+## Premerges: [0, 0, 0, 0]
+## Offsets: [0, 1, 2, 3]
+##
+## Granularity: 5
+## Global Timeout: 50
+## Timeout Timeout: 100
+## Check Timeout: 100
+##
+## Election :: Trials: 500
+## Election :: Max Ticks: 500
+## Election :: Max Checks: 50
+##
+## AYC :: Trials: 500
+## AYC :: Max Ticks: 150
+## AYC :: Max Checks: 50
+################# PROFILE SUMMARY ####################
+{
+    "0": {
+        "nocoordinators": 500
+    }, 
+    "5": {
+        "nocoordinators": 500
+    }, 
+    "10": {
+        "nocoordinators": 500
+    }, 
+    "15": {
+        "nocoordinators": 500
+    }, 
+    "20": {
+        "nocoordinators": 500
+    }, 
+    "25": {
+        "nocoordinators": 500
+    }, 
+    "30": {
+        "nocoordinators": 500
+    }, 
+    "35": {
+        "nocoordinators": 500
+    }, 
+    "40": {
+        "nocoordinators": 500
+    }, 
+    "45": {
+        "nocoordinators": 500
+    }, 
+    "50": {
+        "nocoordinators": 500
+    }, 
+    "55": {
+        "nocoordinators": 500
+    }, 
+    "60": {
+        "nocoordinators": 500
+    }, 
+    "65": {
+        "nocoordinators": 500
+    }, 
+    "70": {
+        "nocoordinators": 500
+    }, 
+    "75": {
+        "nocoordinators": 500
+    }, 
+    "80": {
+        "nocoordinators": 500
+    }, 
+    "85": {
+        "nocoordinators": 500
+    }, 
+    "90": {
+        "nocoordinators": 500
+    }, 
+    "95": {
+        "nocoordinators": 500
+    }, 
+    "100": {
+        "nocoordinators": 500
+    }
+}

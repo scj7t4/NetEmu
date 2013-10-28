@@ -3,9 +3,13 @@
     "check_timeout": 10000, 
     "offsets": [
         0, 
-        0
+        1, 
+        2, 
+        3
     ], 
     "premerges": [
+        0, 
+        0, 
         0, 
         0
     ], 
@@ -16,7 +20,7 @@
         "max_checks": 50, 
         "max_time": 15000
     }, 
-    "participants": 0, 
+    "participants": 3, 
     "election": {
         "trials": 500, 
         "max_checks": 50, 
@@ -25,8 +29,8 @@
     "granularity": 5, 
     "timeout_timeout": 10000, 
     "partitions": [
-        0, 
-        0
+        1, 
+        2
     ], 
-    "resend": 200
+    "resend": 100
 }
