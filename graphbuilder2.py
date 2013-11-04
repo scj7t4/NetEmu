@@ -174,10 +174,10 @@ class SystemConfig(object):
             self.transaway[reliability] = 0
             self.nochange[reliability] = 0
             for possibility, transitions in possibilities.iteritems():
-                self.transaway[reliability] += transitions
                 if possibility == "nocoordinators":
                     self.nochange[reliability] = transitions
                     continue
+                self.transaway[reliability] += transitions
                 s = []
                 for group in possibility:
                     s.append( applymapping(group, peermap) )
@@ -190,12 +190,11 @@ class SystemConfig(object):
             total = self.nochange[probability] + self.transaway[probability]
             #No coordinators is a failure!!!
             failrate = (self.nochange[probability] * 1.0) / total
-            print failrate
         except KeyError:
             return float("inf")
         try:
             return AYT_RATE / (1 - failrate)
-        except ValueError:
+        except ZeroDivisionError:
             return float("inf")
     
     def getelectiontransitions(self,probability):
@@ -258,18 +257,21 @@ def graphbuilder( roottuple, probability ):
             continue
         closedset.add(current)
         etime = current.gettimetoelection(probability)
-        label = "{} ({}s)".format(1.0/etime, etime)
+        label = "{0:.3f} ({1:.2f}s)".format(1.0/etime, etime)
         f.write("\"{}\" -> \"E{}\" [ label = \"{}\" ]; \n".format(current,current,label))
+        sanity = 0
         for (config, occurance) in current.getelectiontransitions(probability):
             openset.add(config)
+            sanity += occurance
             lmbd = occurance * (1.0 / ELECTION_DURATION)
             t = 1.0 / lmbd
-            label = "{} ({}s)".format(lmbd, t)
+            label = "{0:.3f} ({1:.2f}s)".format(lmbd, t)
             f.write("\"E{}\" -> \"{}\" [label = \"{}\" ]; \n".format(current,config,label))
+        print "SANITY: {}".format(sanity)
         for (config, lmbd) in current.getgrouptransitions(probability):
             openset.add(config)
             t = 1/lmbd
-            label = "{} ({}s)".format(lmbd, t)
+            label = "{0:.3f} ({1:.2f}s)".format(lmbd, t)
             f.write("\"{}\" -> \"{}\" [ label = \"{}\" ]; \n".format(current,config,label))
     f.write("}\n")
     f.close()
@@ -294,10 +296,10 @@ def test():
 def main(dotest=True):
     if dotest:
         test()
-    for p in range(0,5,5):
+    for p in range(0,101,5):
         print "RUNNING {}".format(p)
         resultfile = graphbuilder( ( (0,), (1,), (2,), (3,) ), p)
-        subprocess.call(["dot", resultfile, "-oresult{}.png".format(p), "-Tpng:cairo"])
+        subprocess.call(["dot", resultfile, "-oresult{}.png".format(p), "-Tpng:cairo", "-Kcirco"])
 
 if __name__ == "__main__":
     main(False)
