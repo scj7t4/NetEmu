@@ -1,6 +1,5 @@
 import random
 import protocol
-import stats
 from protocol import SUC,SRC
 from multitools import *
 
@@ -47,14 +46,15 @@ def simulation(p):
 
 def check(p, offsets):
     leader = Participant()
-    leader_channels = [ CONFIG.PROTOCOL(p) for x in range(CONFIG.PARTICIPANTS - 1) ]
+    relmap = reliability(p)
+    leader_channels = [ CONFIG.PROTOCOL(relmap[ (0,x+1) ]) for x in range(CONFIG.PARTICIPANTS - 1) ]
     c = 1
     for channel in leader_channels:
         leader.add_channel(c,channel)
         c += 1
 
     member = [ Participant() for x in range(CONFIG.PARTICIPANTS - 1) ]
-    member_channels = [ CONFIG.PROTOCOL(p) for x in range(CONFIG.PARTICIPANTS - 1) ]
+    member_channels = [ CONFIG.PROTOCOL( relmap[ (x+1, 0) ]) for x in range(CONFIG.PARTICIPANTS - 1) ]
     for party, channel in zip(member,member_channels):
         party.add_channel(0,channel)
    

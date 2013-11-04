@@ -1,6 +1,5 @@
 import random
 import protocol
-import stats
 from protocol import SUC,SRC
 from multitools import *
 

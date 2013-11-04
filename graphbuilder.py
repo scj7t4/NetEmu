@@ -7,7 +7,10 @@ SOURCE = "out"
 
 def tupletofile(ftype, tup):
     tup = list(tup)
-    return "{}-{}.dat".format(ftype, [ str(x) for x in list(tup) ].join("-") )
+    return desctofile(ftype, [ str(x) for x in list(tup) ].join("-"))
+
+def desctofile(ftype, desc):
+    return "{}-{}.dat".format(ftype, desc )
 
 def partitionmap():
     ptop = {}
@@ -42,43 +45,33 @@ def parsecommentedjson(fp):
             result += line
     return json.reads(result)
 
-def buildmapping(group,aycmapping):
-    c = 0
+def loadmapping(filename):
     d = {}
-    seen = set()
-    leader = group[0]
-    #build a reverse map
-    ptop = partitionmap()
-    rtop = {}
-    for k in ptop:
-        try:
-            rtop[ ptop[k] ].append(k)
-        except KeyError:
-            rtop[ ptop[k] ] = [k]
-
-    for i in range(len(group)):
-        if i in seen:
-            continue
-        d[c] = i
-        c += 1
-        seen.add(i)
-        part = ptop[i]
-        others = rtop[part]
-        for x in others:
-            if x in group and not seen(x):
-                d[c] = x
-                c += 1
-                seen.add(x)
+    f = open(filename)
+    for l in f:
+        tokens = l.split('\t')
+        key = eval(tokens[0])
+        #Token 1 the current view
+        d[key] = {}
+        #Token 2 the election set to load
+        d[key]['set'] = tokens[1]
+        #Token 3 the mapping to the new set
+        c = 0  
+        for v in eval(tokens[2]):
+            d[key]['map'][c] = v
+            c += 1
     return d
 
-def remap(aycconfig, mapping)
+def remap(resultconfig, mapping):
     r = []
-    for g in aycconfig:
-        r.append( tuple([ mapping[m] for m in g ]) )
-    return tuple(r)
-            
-       
-
+    for group in resultconfig:
+        g = []
+        for member in group:
+            g.append(mapping[member])
+        g = tuple( g[:1] + sorted(g[1:]) )
+        r.append(g)
+    return tuple(sorted(r))            
+    
 # Start with the root state because you can't degrade out of that.
 openset = set()
 openset.add( ((0), (1), (2), (3)) )
@@ -86,6 +79,9 @@ openset.add( ((0), (1), (2), (3)) )
 closedset = set()
 
 graph = {}
+
+AYTMAP = loadmapping('AYT-trans.tsv')
+ELECTIONMAP = loadmapping('ELECTION-trans.tsv')
 
 while len(openset) > 0:
     # For a state to be processed:
@@ -95,28 +91,32 @@ while len(openset) > 0:
     # Consider if this state can degrade. If it can (leaders < PARTICIPANTS).
     # examine the AYC file to see how it degrades. Transition time is inversely
     # related to the time between AYCs and how many succeed. 
-    if len(current) < participants:
+    if len(current) < PARTICIPANTS:
         #Extract each group from the current descriptor
+        combined = {}
         for g in current:
-            if len(g) > 1:
-                #We convert the current descriptor to a file descriptor:
-                fdesc = converttof(g)
-                #The convert that to a filename:
-                fpath = os.path.join( source, tupletofile('AYC',fdec) )
-                f = open(fpath)
-                dataset = parsecommentedjson(f)
-                mapping = buildmapping(g, fdesc)
-                for prob in dataset:
-                    #For each probablitiy in the dataset, see how it degrades.
-                    #Node 0 is always the leader. The new leader is the same as
-                    #old one, but more leaders could have been created.
-                    if prob not in graph:
-                        graph[prob] = {}
-                    for resultconfig in dataset[prob]:
-                        resultconfig = remap(resultconfig, mapping)
-                        graph[prob][current] = (resultconfig,dataset[prob][resultconfig])
-                        if resultconfig not in closedset:
-                            openset.add(resultconfig)
+            dset = AYTMAP[g]['set']
+            dmap = AYTMAP[g]['map']
+            if dset == None:
+                continue
+            fpath = os.path.join( SOURCE, desctofile('AYC',dmap) )
+            f = open(fpath)
+            dataset = parsecommentedjson(f)
+            for prob in dataset:
+                if prob not in combined:
+                    combined[prob] = []
+                #For each probablitiy in the dataset, see how it degrades.
+                #Node 0 is always the leader. The new leader is the same as
+                #old one, but more leaders could have been created.
+                for resultconfig in dataset[prob]:
+                    combined[prob] += remap(resultconfig, mapping)
+        for prob in combined:
+            if prob not in graph:
+                graph[prob] = {}
+            for resultconfig in combined[prob]:
+                graph[prob][current] = (resultconfig,dataset[prob][resultconfig])
+                if resultconfig not in closedset:
+                    openset.add(resultconfig)
     else:
         #This state can't degrade.
         pass

@@ -1,6 +1,5 @@
 import random
 from protocol import SUC
-from stats import *
 from multitools import *
 from settings import *
 
@@ -135,6 +134,7 @@ def check(p, offsets):
     peers = {}
 
     relmap = reliability(p)
+
     premerges = CONFIG.PREMERGES
     # For each pair of participiants, create a unidirectional channel and protocol between them.
     for i in range(CONFIG.PARTICIPANTS):

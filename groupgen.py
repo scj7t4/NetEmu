@@ -43,18 +43,21 @@ def allunique(comb):
             s.add(m)
     return True    
 
-def overviews(groups):
+def overviews():
+    groups = [ g for g in generate() ]
     for i in range(1,GROUPSIZE+1):
         for comb in itertools.combinations(groups,i):
             if combinedsize(comb) == GROUPSIZE and allunique(comb):
-                yield comb
+                t = list(comb)
+                t.sort()
+                yield tuple(t)
 
 def main():
     groups = []
     for x in generate():
         print x
         groups.append(x)
-    for x in overviews(groups):
+    for x in overviews():
         print x
 
 if __name__ == "__main__":
