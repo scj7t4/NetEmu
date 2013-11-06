@@ -1,6 +1,7 @@
 import itertools
 import json
 import subprocess
+import groupgen
 
 AYT_RATE = 5
 ELECTION_DURATION = 15
@@ -228,9 +229,15 @@ class SystemConfig(object):
                 t = list(config)
                 t[i] = newgroup
                 yield ( make_state(t), lambd * occurance) 
-                
+
+    def astuple(self):
+        return tuple([ g.members for g in self.config ])
+
+    def assharpe(self):
+        return tuptosharpe(self.astuple())
+
     def __repr__(self):
-        return str(tuple([ g.members for g in self.config ]))
+        return str(self.astuple())
         
     def __eq__(self, other):
         return self.config == other.config
@@ -241,15 +248,26 @@ class SystemConfig(object):
     def __hash__(self):
         t = tuple([ g.members for g in self.config ])
         return t.__hash__()
-            
+
+def tuptosharpe(inp):
+    s = ""
+    return "_".join( [ "".join([ str(m) for m in group ]) for group in inp ])
+        
 def graphbuilder( roottuple, probability ):
     root = StatePool.getsystembytuple(roottuple)
     filename ="result{}.gv".format(probability) 
+    filename2 = "markov{}.mk".format(probability)
     f = open(filename,'w')
     f.write("digraph markov_chain { \n")
     f.write("rankdir=LR;\n")
+    s = open(filename2,'w')
+    s.write("format 8\n")
+    s.write("factor on\n")
+    sharpedesc = "TRANS{}".format(probability) 
+    s.write("markov {}\n".format(sharpedesc))
     openset = set( [ root ] )
     closedset = set()
+    noelect = set()
     while len(openset) > 0:
         current = openset.pop()
         print "Considering {}".format(current)
@@ -257,30 +275,67 @@ def graphbuilder( roottuple, probability ):
             continue
         closedset.add(current)
         etime = current.gettimetoelection(probability)
-        label = "{0:.3f} ({1:.2f}s)".format(1.0/etime, etime)
-        f.write("\"{}\" -> \"E{}\" [ label = \"{}\" ]; \n".format(current,current,label))
-        sanity = 0
-        for (config, occurance) in current.getelectiontransitions(probability):
-            openset.add(config)
-            sanity += occurance
-            lmbd = occurance * (1.0 / ELECTION_DURATION)
-            t = 1.0 / lmbd
-            label = "{0:.3f} ({1:.2f}s)".format(lmbd, t)
-            f.write("\"E{}\" -> \"{}\" [label = \"{}\" ]; \n".format(current,config,label))
-        print "SANITY: {}".format(sanity)
+        lmbd = 1.0/etime
+        if lmbd > 0.0:
+            label = "{0:.3f} ({1:.2f}s)".format(lmbd, etime)
+            f.write("\"{}\" -> \"E{}\" [ label = \"{}\" ]; \n".format(current,current,label))
+            s.write("{} E{} {}\n".format(current.assharpe(), current.assharpe(), lmbd))
+            sanity = 0
+            for (config, occurance) in current.getelectiontransitions(probability):
+                sanity += occurance
+                lmbd = occurance * (1.0 / ELECTION_DURATION)
+                if lmbd == 0.0:
+                    continue
+                openset.add(config)
+                t = 1.0 / lmbd
+                label = "{0:.3f} ({1:.2f}s)".format(lmbd, t)
+                f.write("\"E{}\" -> \"{}\" [label = \"{}\" ]; \n".format(current,config,label))
+                s.write("E{} {} {}\n".format(current.assharpe(), config.assharpe(), lmbd))
+            print "SANITY: {}".format(sanity)
+        else:
+            noelect.add(current)
         for (config, lmbd) in current.getgrouptransitions(probability):
+            if lmbd == 0.0:
+                continue
             openset.add(config)
             t = 1/lmbd
             label = "{0:.3f} ({1:.2f}s)".format(lmbd, t)
             f.write("\"{}\" -> \"{}\" [ label = \"{}\" ]; \n".format(current,config,label))
+            s.write("{} {} {}\n".format(current.assharpe(), config.assharpe(), lmbd))
     f.write("}\n")
     f.close()
+    s.write("reward\n")
+    bnd = []
+    for sys in closedset:
+        shp = sys.assharpe()
+        s.write("{} rew_{}\n".format(shp,shp))
+        if sys not in noelect:
+            s.write("E{} rew_E{}\n".format(shp,shp))
+        bnd.append( (shp,reward(sys.astuple())) )
+        bnd.append( ("E"+shp, 0 ) )
+    s.write("end\n")
+    s.write("end\n")
+    s.write("bind\n")
+    for shp, rew in bnd:
+        s.write("rew_{} {}\n".format( shp, rew ) )
+    s.write("end\n")
+    s.write("var SS_avail cexrt(600;{})\n".format(sharpedesc))
+    s.write("expr SS_avail\n")
+    s.write("end\n")
+    s.close()
     return filename
     
+def reward(conftuple):
+    for g in conftuple:
+        if 0 in list(g) and len(g) > 1:
+            return 1
+        elif 0 in list(g):
+            return 0
+    return 0
+
 def test():
     # One! for each group configuration, make sure that it can be loaded from
     # the tuple:
-    import groupgen
     for group in groupgen.generate():
         print "Trying group: {}".format(group)
         StatePool.getgroupbytuple(group)
