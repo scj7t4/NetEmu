@@ -1,4 +1,8 @@
 mkdir -p out
+python2 aycmulti.py profiles/2-2-TRANS-0-0.json > out/AYC-0-0.dat
+python2 electionmulti.py profiles/2-2-TRANS-0-0.json > out/ELECTION-0-0.dat
+python2 invitemulti.py profiles/2-2-TRANS-0-0.json > out/INVITE-0-0.dat
+mkdir -p out
 python2 aycmulti.py profiles/2-2-TRANS-0-1.json > out/AYC-0-1.dat
 python2 electionmulti.py profiles/2-2-TRANS-0-1.json > out/ELECTION-0-1.dat
 python2 invitemulti.py profiles/2-2-TRANS-0-1.json > out/INVITE-0-1.dat

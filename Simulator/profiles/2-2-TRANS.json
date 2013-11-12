@@ -1,8 +1,8 @@
 {
     "_comment": "Two node example with no offset",
     "participants": 4,
-    "premerges": [ 0, 0, 0, 0 ],
-    "offsets": [ 0, 1, 2, 3 ],
+    "premerges": [ 0, 1, 2, 3 ],
+    "offsets": [ 0, 2, 4, 6 ],
     "partitions": [ 2, 2 ],
     "granularity": 5,
     "protocol": "SUC",

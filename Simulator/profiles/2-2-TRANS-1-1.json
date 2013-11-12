@@ -3,15 +3,15 @@
     "check_timeout": 10000, 
     "offsets": [
         0, 
-        1, 
         2, 
-        3
+        4, 
+        6
     ], 
     "premerges": [
         0, 
-        0, 
-        0, 
-        0
+        1, 
+        2, 
+        3
     ], 
     "_comment": "Two node example with no offset", 
     "global_timeout": 5000, 

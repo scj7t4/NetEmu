@@ -112,10 +112,11 @@ class Group(object):
         try:  
             total = self.nochange[probability] + self.transaway[probability]
             successrate = (self.nochange[probability] * 1.0) / total
+            print successrate
         except KeyError:
             return 0.0
         try:
-            return AYT_RATE / (1 - successrate)
+            return (1 - successrate) / AYT_RATE
         except ZeroDivisionError:
             return float("inf")
     
@@ -268,6 +269,8 @@ def graphbuilder( roottuple, probability ):
     openset = set( [ root ] )
     closedset = set()
     noelect = set()
+    edgeout = {}
+    edgein = {}
     while len(openset) > 0:
         current = openset.pop()
         print "Considering {}".format(current)
@@ -287,17 +290,32 @@ def graphbuilder( roottuple, probability ):
                 if lmbd == 0.0:
                     continue
                 openset.add(config)
+                try:
+                    edgeout[current] += 1
+                except KeyError:
+                    edgeout[current] = 1
+                try:
+                    edgein[config] += 1
+                except KeyError:
+                    edgein[config] = 1
                 t = 1.0 / lmbd
                 label = "{0:.3f} ({1:.2f}s)".format(lmbd, t)
                 f.write("\"E{}\" -> \"{}\" [label = \"{}\" ]; \n".format(current,config,label))
                 s.write("E{} {} {}\n".format(current.assharpe(), config.assharpe(), lmbd))
-            print "SANITY: {}".format(sanity)
         else:
             noelect.add(current)
         for (config, lmbd) in current.getgrouptransitions(probability):
             if lmbd == 0.0:
                 continue
             openset.add(config)
+            try:
+                edgeout[current] += 1
+            except KeyError:
+                edgeout[current] = 1
+            try:
+                edgein[config] += 1
+            except KeyError:
+                edgein[config] = 1
             t = 1/lmbd
             label = "{0:.3f} ({1:.2f}s)".format(lmbd, t)
             f.write("\"{}\" -> \"{}\" [ label = \"{}\" ]; \n".format(current,config,label))
@@ -307,31 +325,48 @@ def graphbuilder( roottuple, probability ):
     s.write("reward\n")
     bnd = []
     for sys in closedset:
+        #if sys == root:
+        #    continue
         shp = sys.assharpe()
         s.write("{} rew_{}\n".format(shp,shp))
         if sys not in noelect:
             s.write("E{} rew_E{}\n".format(shp,shp))
-        bnd.append( (shp,reward(sys.astuple())) )
-        bnd.append( ("E"+shp, 0 ) )
+        rwd = reward(sys.astuple())
+        bnd.append( (shp,rwd) )
+        bnd.append( ("E"+shp,rwd ) )
     s.write("end\n")
     s.write("end\n")
     s.write("bind\n")
     for shp, rew in bnd:
         s.write("rew_{} {}\n".format( shp, rew ) )
     s.write("end\n")
-    s.write("var SS_avail cexrt(600;{})\n".format(sharpedesc))
+    s.write("var SS_trans cexrt(600;{})\n".format(sharpedesc))
+    s.write("var SS_avail cexrt(60;{})\n".format(sharpedesc))
+    s.write("expr SS_trans\n")
     s.write("expr SS_avail\n")
     s.write("end\n")
     s.close()
+    for state in closedset:
+        try:
+            if edgein[state] >= 1 and edgeout[state] >= 1:
+                continue
+        except KeyError:
+            pass
+        print "State {} is reducible!".format(state)
     return filename
     
 def reward(conftuple):
-    for g in conftuple:
-        if 0 in list(g) and len(g) > 1:
-            return 1
-        elif 0 in list(g):
-            return 0
-    return 0
+    #return 1 if any( [ len(g) > 1 for g in conftuple ] ) else 0
+    """
+    rwd = 0
+    for m in range(PARTICIPANTS):
+        for g in conftuple:
+            if m in g and len(g) > 1:
+                rwd += .25
+                break
+    return rwd
+    """
+    return sum( [ len(g) * 1.0 for g in conftuple ] ) / len(conftuple)
 
 def test():
     # One! for each group configuration, make sure that it can be loaded from
@@ -352,7 +387,7 @@ def main(dotest=True):
     if dotest:
         test()
     for p in range(0,101,5):
-        print "RUNNING {}".format(p)
+        print "!!! RUNNING {}".format(p)
         resultfile = graphbuilder( ( (0,), (1,), (2,), (3,) ), p)
         subprocess.call(["dot", resultfile, "-oresult{}.png".format(p), "-Tpng:cairo", "-Kcirco"])
 
