@@ -271,6 +271,7 @@ def graphbuilder( roottuple, probability ):
     noelect = set()
     edgeout = {}
     edgein = {}
+    electionset = set()
     while len(openset) > 0:
         current = openset.pop()
         print "Considering {}".format(current)
@@ -280,14 +281,14 @@ def graphbuilder( roottuple, probability ):
         etime = current.gettimetoelection(probability)
         lmbd = 1.0/etime
         if lmbd > 0.0:
-            label = "{0:.3f} ({1:.2f}s)".format(lmbd, etime)
-            f.write("\"{}\" -> \"E{}\" [ label = \"{}\" ]; \n".format(current,current,label))
-            s.write("{} E{} {}\n".format(current.assharpe(), current.assharpe(), lmbd))
             sanity = 0
             for (config, occurance) in current.getelectiontransitions(probability):
+                label = "{0:.3f} ({1:.2f}s)".format(occurance*lmbd, occurance*etime)
+                f.write("\"{}\" -> \"{}E{}\" [ label = \"{}\" ]; \n".format(current,current,config,label))
+                s.write("{} {}E{} {}\n".format(current.assharpe(), current.assharpe(), config.assharpe(), occurance*lmbd))
                 sanity += occurance
-                lmbd = occurance * (1.0 / ELECTION_DURATION)
-                if lmbd == 0.0:
+                lmbd2 = (1.0 / ELECTION_DURATION)
+                if lmbd2 == 0.0:
                     continue
                 openset.add(config)
                 try:
@@ -298,10 +299,11 @@ def graphbuilder( roottuple, probability ):
                     edgein[config] += 1
                 except KeyError:
                     edgein[config] = 1
-                t = 1.0 / lmbd
-                label = "{0:.3f} ({1:.2f}s)".format(lmbd, t)
-                f.write("\"E{}\" -> \"{}\" [label = \"{}\" ]; \n".format(current,config,label))
-                s.write("E{} {} {}\n".format(current.assharpe(), config.assharpe(), lmbd))
+                t = 1.0 / lmbd2
+                label = "{0:.3f} ({1:.2f}s)".format(lmbd2, t)
+                f.write("\"{}E{}\" -> \"{}\" [label = \"{}\" ]; \n".format(current,config,label))
+                s.write("{}E{} {} {}\n".format(current.assharpe(), config.assharpe(), config.assharpe(), lmbd2))
+                electionset.add("{}E{}".format(current.assharpe(), config.assharpe()))
         else:
             noelect.add(current)
         for (config, lmbd) in current.getgrouptransitions(probability):
@@ -329,11 +331,11 @@ def graphbuilder( roottuple, probability ):
         #    continue
         shp = sys.assharpe()
         s.write("{} rew_{}\n".format(shp,shp))
-        if sys not in noelect:
-            s.write("E{} rew_E{}\n".format(shp,shp))
         rwd = reward(sys.astuple())
         bnd.append( (shp,rwd) )
-        bnd.append( ("E"+shp,rwd ) )
+    for election in electionset
+        s.write("{} rew_{}\n".format(election,election))
+        bnd.append( (election,0 ) )
     s.write("end\n")
     s.write("{} {}\n".format(root.assharpe(),1.0))
     s.write("end\n")
