@@ -333,7 +333,7 @@ def graphbuilder( roottuple, probability ):
             s.write("E{} rew_E{}\n".format(shp,shp))
         rwd = reward(sys.astuple())
         bnd.append( (shp,rwd) )
-        bnd.append( ("E"+shp,0 ) )
+        bnd.append( ("E"+shp,rwd ) )
     s.write("end\n")
     s.write("{} {}\n".format(root.assharpe(),1.0))
     s.write("end\n")
