@@ -333,8 +333,9 @@ def graphbuilder( roottuple, probability ):
             s.write("E{} rew_E{}\n".format(shp,shp))
         rwd = reward(sys.astuple())
         bnd.append( (shp,rwd) )
-        bnd.append( ("E"+shp,rwd ) )
+        bnd.append( ("E"+shp,0 ) )
     s.write("end\n")
+    s.write("{} {}\n".format(root.assharpe(),1.0))
     s.write("end\n")
     s.write("bind\n")
     for shp, rew in bnd:
@@ -342,8 +343,10 @@ def graphbuilder( roottuple, probability ):
     s.write("end\n")
     s.write("var SS_trans cexrt(600;{})\n".format(sharpedesc))
     s.write("var SS_avail cexrt(60;{})\n".format(sharpedesc))
+    s.write("var SS_rate exrt(60;{})\n".format(sharpedesc))
     s.write("expr SS_trans\n")
     s.write("expr SS_avail\n")
+    s.write("expr SS_rate\n")
     s.write("end\n")
     s.close()
     for state in closedset:
@@ -356,7 +359,7 @@ def graphbuilder( roottuple, probability ):
     return filename
     
 def reward(conftuple):
-    #return 1 if any( [ len(g) > 1 for g in conftuple ] ) else 0
+    return 1 if any( [ len(g) > 1 for g in conftuple ] ) else 0
     """
     rwd = 0
     for m in range(PARTICIPANTS):
@@ -366,7 +369,7 @@ def reward(conftuple):
                 break
     return rwd
     """
-    return sum( [ len(g) * 1.0 for g in conftuple ] ) / len(conftuple)
+    #return sum( [ len(g) * 1.0 for g in conftuple ] ) / len(conftuple)
 
 def test():
     # One! for each group configuration, make sure that it can be loaded from
