@@ -1,0 +1,32 @@
+format 8
+factor on
+markov TRANS75
+0_1_2_3 E0_1_2_3 0.2
+E0_1_2_3 0123 0.0666666666667
+0123 013_2 0.0004
+013_2 E013_2 0.2
+E013_2 0123 0.0666666666667
+reward
+0123 rew_0123
+0_1_2_3 rew_0_1_2_3
+E0_1_2_3 rew_E0_1_2_3
+013_2 rew_013_2
+E013_2 rew_E013_2
+end
+0_1_2_3 1.0
+end
+bind
+rew_0123 1
+rew_E0123 0
+rew_0_1_2_3 0
+rew_E0_1_2_3 0
+rew_013_2 1
+rew_E013_2 0
+end
+var SS_trans cexrt(600;TRANS75)
+var SS_avail cexrt(60;TRANS75)
+var SS_rate exrt(60;TRANS75)
+expr SS_trans
+expr SS_avail
+expr SS_rate
+end
