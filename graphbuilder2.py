@@ -301,7 +301,7 @@ def graphbuilder( roottuple, probability ):
                     edgein[config] = 1
                 t = 1.0 / lmbd2
                 label = "{0:.3f} ({1:.2f}s)".format(lmbd2, t)
-                f.write("\"{}E{}\" -> \"{}\" [label = \"{}\" ]; \n".format(current,config,label))
+                f.write("\"{}E{}\" -> \"{}\" [label = \"{}\" ]; \n".format(current,config,config,label))
                 s.write("{}E{} {} {}\n".format(current.assharpe(), config.assharpe(), config.assharpe(), lmbd2))
                 electionset.add("{}E{}".format(current.assharpe(), config.assharpe()))
         else:
@@ -333,7 +333,7 @@ def graphbuilder( roottuple, probability ):
         s.write("{} rew_{}\n".format(shp,shp))
         rwd = reward(sys.astuple())
         bnd.append( (shp,rwd) )
-    for election in electionset
+    for election in electionset:
         s.write("{} rew_{}\n".format(election,election))
         bnd.append( (election,0 ) )
     s.write("end\n")
