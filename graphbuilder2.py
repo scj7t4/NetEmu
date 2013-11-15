@@ -283,9 +283,10 @@ def graphbuilder( roottuple, probability ):
         if lmbd > 0.0:
             sanity = 0
             for (config, occurance) in current.getelectiontransitions(probability):
-                label = "{0:.3f} ({1:.2f}s)".format(occurance*lmbd, occurance*etime)
+                lte = lmbd * occurance
+                label = "{0:.3f} ({1:.2f}s)".format(lte, 1/lte)
                 f.write("\"{}\" -> \"{}E{}\" [ label = \"{}\" ]; \n".format(current,current,config,label))
-                s.write("{} {}E{} {}\n".format(current.assharpe(), current.assharpe(), config.assharpe(), occurance*lmbd))
+                s.write("{} {}E{} {}\n".format(current.assharpe(), current.assharpe(), config.assharpe(), lte))
                 sanity += occurance
                 lmbd2 = (1.0 / ELECTION_DURATION)
                 if lmbd2 == 0.0:
@@ -343,12 +344,12 @@ def graphbuilder( roottuple, probability ):
     for shp, rew in bnd:
         s.write("rew_{} {}\n".format( shp, rew ) )
     s.write("end\n")
-    s.write("var SS_trans cexrt(600;{})\n".format(sharpedesc))
-    s.write("var SS_avail cexrt(60;{})\n".format(sharpedesc))
-    s.write("var SS_rate exrt(60;{})\n".format(sharpedesc))
+    s.write("var SS_trans cexrt(1200;{})\n".format(sharpedesc))
+    #s.write("var SS_avail cexrt(60;{})\n".format(sharpedesc))
+    #s.write("var SS_rate exrt(60;{})\n".format(sharpedesc))
     s.write("expr SS_trans\n")
-    s.write("expr SS_avail\n")
-    s.write("expr SS_rate\n")
+    #s.write("expr SS_avail\n")
+    #s.write("expr SS_rate\n")
     s.write("end\n")
     s.close()
     for state in closedset:
@@ -394,7 +395,7 @@ def main(dotest=True):
     for p in range(0,101,5):
         print "!!! RUNNING {}".format(p)
         resultfile = graphbuilder( ( (0,), (1,), (2,), (3,) ), p)
-        subprocess.call(["dot", resultfile, "-oresult{}.png".format(p), "-Tpng:cairo", "-Kcirco"])
+        subprocess.call(["dot", resultfile, "-oresult{}.png".format(p), "-Tpng:cairo"])
 
 if __name__ == "__main__":
     main(False)

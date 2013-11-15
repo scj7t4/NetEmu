@@ -15,10 +15,6 @@ rew_0123 1
 rew_0_1_2_3 0
 rew_0_1_2_3E0123 0
 end
-var SS_trans cexrt(600;TRANS100)
-var SS_avail cexrt(60;TRANS100)
-var SS_rate exrt(60;TRANS100)
+var SS_trans cexrt(1200;TRANS100)
 expr SS_trans
-expr SS_avail
-expr SS_rate
 end
