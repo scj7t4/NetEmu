@@ -93,6 +93,7 @@ class Group(object):
             self.transaway[reliability] = 0
             for possibility,transitions in possibilites.iteritems():
                 remapped = applymapping(possibility, peermap)
+                print "{} == {} => {}".format(remappped,self.members, transitions)
                 if remapped == self.members:
                     self.nochange[reliability] += transitions
                     continue
@@ -171,7 +172,6 @@ class SystemConfig(object):
         self.transaway = {}
         for reliability, possibilities in tjson.iteritems():
             reliability = int(reliability)
-            print reliability
             self.transitions[reliability] = {}
             self.transaway[reliability] = 0
             self.nochange[reliability] = 0
