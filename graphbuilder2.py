@@ -3,7 +3,7 @@ import json
 import subprocess
 import groupgen
 
-AYT_RATE = 5
+AYT_RATE = 15
 ELECTION_DURATION = 15
 PARTICIPANTS = 4
 
@@ -79,6 +79,7 @@ class Group(object):
     members = None
     def __init__(self,gtuple):
         self.members = gtuple
+        print "Loading Group: {}".format(self.members)
         d = loadmapping('AYT-trans.tsv')
         config =  d[ self.members ]['conf']
         peermap = d[ self.members ]['map']
@@ -93,13 +94,17 @@ class Group(object):
             self.transaway[reliability] = 0
             for possibility,transitions in possibilites.iteritems():
                 remapped = applymapping(possibility, peermap)
-                print "{} == {} => {}".format(remappped,self.members, transitions)
                 if remapped == self.members:
                     self.nochange[reliability] += transitions
                     continue
                 self.transaway[reliability] += transitions
                 self.transitions[reliability][ remapped ] = transitions
-                
+                if reliability == 5:
+                    print "({}) {} == {} => {}".format(reliability, remapped, self.members, transitions)
+            if reliability == 5:
+                print "No change: {} | Trans Away: {} | Trans: {}".format(self.nochange[reliability],self.transaway[reliability],self.transitions[reliability])
+        print "Lambda: {}".format(self.getlambda(5))               
+ 
     def getnochange(self,probability):
         return self.nochange[probability]
     
@@ -274,7 +279,7 @@ def graphbuilder( roottuple, probability ):
     electionset = set()
     while len(openset) > 0:
         current = openset.pop()
-        print "Considering {}".format(current)
+        #print "Considering {}".format(current)
         if current in closedset:
             continue
         closedset.add(current)
@@ -398,4 +403,4 @@ def main(dotest=True):
         subprocess.call(["dot", resultfile, "-oresult{}.png".format(p), "-Tpng:cairo"])
 
 if __name__ == "__main__":
-    main(False)
+    main(True)
