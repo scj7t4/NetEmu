@@ -22,6 +22,8 @@ rew_013_2 1
 rew_0_1_2_3E0123 0
 rew_013_2E0123 0
 end
-var SS_trans cexrt(1200;TRANS75)
+var SS_total cexrt(600;TRANS75)
+var SS_trans cexrt(60;TRANS75)
+expr SS_total
 expr SS_trans
 end

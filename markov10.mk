@@ -283,6 +283,8 @@ rew_10_2_3E10_2_3 0
 rew_0_1_2_3E01_2_3 0
 rew_0_213E0123 0
 end
-var SS_trans cexrt(1200;TRANS10)
+var SS_total cexrt(600;TRANS10)
+var SS_trans cexrt(60;TRANS10)
+expr SS_total
 expr SS_trans
 end
